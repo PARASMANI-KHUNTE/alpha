@@ -1,9 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import type { Contact, ContactStage, Draft } from '../types/contact';
 import { STAGES } from '../types/contact';
 import { displayValue } from '../utils/contactHelpers';
 import { StageBadge } from './StageBadge';
-import { X, Save, RotateCcw, Check } from 'lucide-react';
+import { X, Save, RotateCcw, Check, AlertTriangle } from 'lucide-react';
 
 interface ContactDetailsPanelProps {
   contact: Contact;
@@ -26,13 +26,22 @@ export function ContactDetailsPanel({
 }: ContactDetailsPanelProps) {
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmCancelRef = useRef<HTMLButtonElement>(null);
   const showSavedRef = useRef(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Focus panel heading on open
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, [contact.id]);
+
+  // Focus confirm dialog cancel button when opened
+  useEffect(() => {
+    if (showConfirmDialog) {
+      confirmCancelRef.current?.focus();
+    }
+  }, [showConfirmDialog]);
 
   // Clean up saved timer on unmount
   useEffect(() => {
@@ -43,13 +52,22 @@ export function ContactDetailsPanel({
 
   const handleClose = useCallback(() => {
     if (isDirty) {
-      const confirmed = window.confirm(
-        'You have unsaved changes. Discard them and close?'
-      );
-      if (!confirmed) return;
+      setShowConfirmDialog(true);
+      return;
     }
     onClose();
   }, [isDirty, onClose]);
+
+  const handleConfirmDiscard = useCallback(() => {
+    setShowConfirmDialog(false);
+    onClose();
+  }, [onClose]);
+
+  const handleCancelConfirm = useCallback(() => {
+    setShowConfirmDialog(false);
+    // Return focus to close button
+    closeButtonRef.current?.focus();
+  }, []);
 
   const handleSave = useCallback(() => {
     onSave();
@@ -73,20 +91,26 @@ export function ContactDetailsPanel({
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        handleClose();
+        if (showConfirmDialog) {
+          handleCancelConfirm();
+        } else {
+          handleClose();
+        }
       }
     },
-    [handleClose]
+    [handleClose, showConfirmDialog, handleCancelConfirm]
   );
 
   return (
-    <aside
-      ref={panelRef}
-      role="dialog"
-      aria-label={`Details for ${contact.name}`}
-      onKeyDown={handleKeyDown}
-      className="flex flex-col h-full w-full max-w-[420px] min-w-[320px] border-l border-stone-200 bg-white overflow-y-auto"
-    >
+    <>
+      <aside
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Details for ${contact.name}`}
+        onKeyDown={handleKeyDown}
+        className="flex flex-col h-full w-full max-w-[420px] min-w-[320px] border-l border-stone-200 bg-white overflow-y-auto"
+      >
       {/* Panel header */}
       <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
         <h2 className="text-base font-semibold text-stone-900 truncate pr-4">
@@ -246,7 +270,63 @@ export function ContactDetailsPanel({
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+
+      {/* Custom Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              handleCancelConfirm();
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-sm mx-4 bg-white rounded-lg shadow-xl border border-stone-200"
+            role="document"
+          >
+            <div className="flex items-start gap-3 p-5">
+              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-amber-100">
+                <AlertTriangle className="h-5 w-5 text-amber-600" aria-hidden="true" />
+              </div>
+              <div className="flex-1">
+                <h3
+                  id="confirm-dialog-title"
+                  className="text-base font-semibold text-stone-900"
+                >
+                  Unsaved Changes
+                </h3>
+                <p className="mt-1 text-sm text-stone-600">
+                  You have unsaved changes. Discard them and close?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-4 bg-stone-50 border-t border-stone-200 rounded-b-lg">
+              <button
+                ref={confirmCancelRef}
+                type="button"
+                onClick={handleCancelConfirm}
+                className="inline-flex items-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-colors hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDiscard}
+                className="inline-flex items-center rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

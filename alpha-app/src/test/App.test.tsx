@@ -183,7 +183,6 @@ describe('App Component Integration', () => {
 
   it('warns when closing panel with unsaved changes', async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false); // Reject discard
     render(<App />);
 
     await user.click(screen.getByRole('button', { name: /open details for elena marchetti/i }));
@@ -194,13 +193,23 @@ describe('App Component Integration', () => {
     const closeBtn = screen.getByRole('button', { name: /close details panel/i });
     await user.click(closeBtn);
 
-    expect(confirmSpy).toHaveBeenCalledWith('You have unsaved changes. Discard them and close?');
-    // Because user cancelled confirm, panel remains open
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // Custom dialog should appear
+    expect(screen.getByText('Unsaved Changes')).toBeInTheDocument();
+    expect(screen.getByText('You have unsaved changes. Discard them and close?')).toBeInTheDocument();
+    // Panel remains open
+    expect(screen.getAllByRole('dialog').length).toBeGreaterThan(0);
 
-    // Now confirm discard
-    confirmSpy.mockReturnValue(true);
+    // Cancel discarding (in confirm dialog)
+    const cancelButtons = screen.getAllByRole('button', { name: /cancel/i });
+    await user.click(cancelButtons[cancelButtons.length - 1]);
+    // Dialog closes, panel still open
+    expect(screen.queryByText('Unsaved Changes')).not.toBeInTheDocument();
+
+    // Try again and discard
     await user.click(closeBtn);
+    expect(screen.getByText('Unsaved Changes')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /discard/i }));
+    // Both dialogs closed
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 

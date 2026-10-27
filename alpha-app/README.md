@@ -1,5 +1,9 @@
 # Alpha Contact Table & Board Prototype
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-alpha--fk90.onrender.com-blue?style=for-the-badge&logo=render)](https://alpha-fk90.onrender.com/)
+
+> 🚀 **Live Demo**: [https://alpha-fk90.onrender.com/](https://alpha-fk90.onrender.com/)
+
 A high-polish, responsive contact management prototype built for the Alpha Frontend Design Engineer evaluation exercise. This application allows small teams to track, scan, and update business contacts across two synchronized visual representations: an information-dense **Table View** and an intuitive stage-grouped **Board View**, backed by a slide-over **Contact Details Panel** with draft isolation, save/cancel mechanics, and keyboard accessibility.
 
 ---
